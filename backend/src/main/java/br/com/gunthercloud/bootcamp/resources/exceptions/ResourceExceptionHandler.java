@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import br.com.gunthercloud.bootcamp.services.exceptions.DatabaseException;
 import br.com.gunthercloud.bootcamp.services.exceptions.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -24,4 +25,14 @@ public class ResourceExceptionHandler {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(err);
 	}
 	
+	@ExceptionHandler(DatabaseException.class)
+	public ResponseEntity<StandardError> database(DatabaseException e, HttpServletRequest request) {
+		StandardError standard = new StandardError();
+		standard.setTimestamp(Instant.now());
+		standard.setStatus(HttpStatus.BAD_REQUEST.value());
+		standard.setError("Database error");
+		standard.setPath(request.getRequestURI());
+		standard.setMessage(e.getMessage());
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(standard);
+	}
 }

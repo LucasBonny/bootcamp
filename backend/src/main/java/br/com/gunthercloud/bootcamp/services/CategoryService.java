@@ -4,12 +4,14 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.gunthercloud.bootcamp.entitites.Category;
 import br.com.gunthercloud.bootcamp.entitites.dto.CategoryDTO;
 import br.com.gunthercloud.bootcamp.repositories.CategoryRepository;
+import br.com.gunthercloud.bootcamp.services.exceptions.DatabaseException;
 import br.com.gunthercloud.bootcamp.services.exceptions.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -50,6 +52,24 @@ public class CategoryService {
 		}
 		catch(RuntimeException e) {
 			throw new ResourceNotFoundException(e.getMessage());
+		}
+		
+	}
+
+	public void delete(Long id) {
+		try {
+			if(categoryRepository.findById(id).isEmpty())
+				throw new ResourceNotFoundException("Id " + id + " not found!");
+			categoryRepository.deleteById(id);
+		}
+		catch(DataIntegrityViolationException  e) {
+			throw new DatabaseException("Category delete error.");
+		}
+		catch(ResourceNotFoundException  e) {
+			throw new ResourceNotFoundException(e.getMessage());
+		}
+		catch(RuntimeException  e) {
+			throw new DatabaseException(e.getMessage());
 		}
 		
 	}
