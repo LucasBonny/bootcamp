@@ -56,4 +56,30 @@ e com isso ja podemos usar a paginação no endpoint pelo postman:
 GET http://localhost:8080/categories?page=1&linesPerPage=5&direction=DESC&orderBy=id
 ```
 
-![alt text](assets/image.png)
+![result](assets/image.png)
+
+## Associação muitos para muitos
+
+Na utilização do `@ManyToMany` temos que criar uma tabela intermediaria, que irá armazenar os ids das categorias e dos produtos.
+
+Para fazer a associação, eu criei uma coleção do tipo `Set` para armazenar os ids das categorias, pois o set é uma coleção que armazena elementos únicos, e o que eu quero é que os elementos sejam únicos entre si, ou seja, não podem repetir.
+
+![model](assets/image-2.png)
+
+```java
+//Entity: Product
+@ManyToMany
+
+//Cria uma tabela intermediaria
+@JoinTable(name = "tb_product_category", 
+
+//Pega a classe atual
+joinColumns = @JoinColumn(name = "product_id"), 
+
+//Pega o que estiver na coleção
+inverseJoinColumns = @JoinColumn(name = "category_id"))
+Set<Category> categories = new HashSet<>();
+
+//Ao fazer isso o Set já tem como identifcar que seria a classe Category que será associada, pois ela herda de Category.
+```
+
