@@ -10,8 +10,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.gunthercloud.bootcamp.entitites.Category;
 import br.com.gunthercloud.bootcamp.entitites.Product;
+import br.com.gunthercloud.bootcamp.entitites.dto.CategoryDTO;
 import br.com.gunthercloud.bootcamp.entitites.dto.ProductDTO;
+import br.com.gunthercloud.bootcamp.repositories.CategoryRepository;
 import br.com.gunthercloud.bootcamp.repositories.ProductRepository;
 import br.com.gunthercloud.bootcamp.services.exceptions.DatabaseException;
 import br.com.gunthercloud.bootcamp.services.exceptions.ResourceNotFoundException;
@@ -22,6 +25,9 @@ public class ProductService {
 
 	@Autowired
 	private ProductRepository productRepository;
+
+	@Autowired
+	private CategoryRepository categoryRepository;
 	
 	@Transactional(readOnly = true)
 	public Page<ProductDTO> findAllPaged(PageRequest pageRequest) {
@@ -42,18 +48,19 @@ public class ProductService {
 
 	@Transactional
 	public ProductDTO insert(ProductDTO obj) {
-		Product p = productRepository.save(new Product(obj));
-		return new ProductDTO(p);
+		Product entity = new Product();
+		copyDtoToEntity(obj, entity);
+		productRepository.save(entity);
+		return new ProductDTO(entity, entity.getCategories());
 	}
 
 	@Transactional
 	public ProductDTO update(Long id, ProductDTO obj) {
 		try {			
-			Product p = productRepository.getReferenceById(id);
-			p = new Product(obj);
-			p.setId(id);
-			productRepository.save(p);
-			return new ProductDTO(p);
+			Product entity = productRepository.getReferenceById(id);
+			copyDtoToEntity(obj, entity);
+			productRepository.save(entity);
+			return new ProductDTO(entity, entity.getCategories());
 		}
 		catch(EntityNotFoundException e) {
 			throw new ResourceNotFoundException("Id " + id + " not found!");
@@ -80,6 +87,19 @@ public class ProductService {
 			throw new DatabaseException(e.getMessage());
 		}
 		
+	}
+	private Product copyDtoToEntity(ProductDTO dto, Product entity) {
+		entity.setName(dto.getName());
+		entity.setDescription(dto.getDescription());
+		entity.setPrice(dto.getPrice());
+		entity.setImgUrl(dto.getImgUrl());
+		entity.setDate(dto.getDate());
+		entity.getCategories().clear();
+		for(CategoryDTO d : dto.getCategories()) {
+			Category cat = categoryRepository.getReferenceById(d.getId());
+			entity.getCategories().add(cat);
+		}
+		return entity;
 	}
 
 }

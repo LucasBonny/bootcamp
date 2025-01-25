@@ -139,3 +139,33 @@ public ProductDTO findById(Long id) {
 ![findAll](assets/image-3.png)
 #### findById
 ![findById](assets/image-4.png)
+
+### Insert, Update and Delete
+
+Para fazer o insert do produto teremos que criar um objeto do tipo Product e adicionar um método `copyDtoToEntity` para copiar os dados do dto para o entity.
+
+```java
+@Autowired
+private CategoryRepository categoryRepository;
+
+private Product copyDtoToEntity(ProductDTO dto, Product entity) {
+    entity.setName(dto.getName());
+    entity.setDescription(dto.getDescription());
+    entity.setPrice(dto.getPrice());
+    entity.setImgUrl(dto.getImgUrl());
+    entity.setDate(dto.getDate());
+    entity.getCategories().clear();
+    for(CategoryDTO d : dto.getCategories()) {
+        Category cat = categoryRepository.getReferenceById(d.getId());
+        entity.getCategories().add(cat);
+    }
+    return entity;
+}
+```
+Fazendo dessa forma a entidade que será salva, terá as categorias que foram passadas no dto.
+
+> [!IMPORTANT]
+> Será necessário adicionar no retorno dos métodos o atributo `getCategories()` para receber nas requisicoes as categorias do produto.
+> ```java
+> return new ProductDTO(entity, entity.getCategories());
+> ```
