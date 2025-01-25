@@ -6,6 +6,9 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import org.springframework.beans.BeanUtils;
+
+import br.com.gunthercloud.bootcamp.entitites.dto.ProductDTO;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -49,6 +52,10 @@ public class Product implements Serializable{
 		this.price = price;
 		this.imgUrl = imgUrl;
 		this.date = date;
+	}
+	
+	public Product(ProductDTO entity) {
+		BeanUtils.copyProperties(entity, this);
 	}
 
 	public Long getId() {

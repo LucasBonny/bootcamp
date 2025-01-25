@@ -83,3 +83,59 @@ Set<Category> categories = new HashSet<>();
 //Ao fazer isso o Set já tem como identifcar que seria a classe Category que será associada, pois ela herda de Category.
 ```
 
+## implementando o Product 
+
+### ProductDTO
+
+O productDTO tem que ter todos os atributos da Product, mas também tem que ter as categorias, então vamos criar um construtor com parâmetros e um construtor para receber a coleção de categorias.
+```java
+//Construtor padrão
+public ProductDTO() {
+}
+
+//Construtor com parâmetros
+public ProductDTO(Long id, String name, String description, Double price, String imgUrl, Instant date) {
+    this.id = id;
+    this.name = name;
+    this.description = description;
+    this.price = price;
+    this.imgUrl = imgUrl;
+    this.date = date;
+}
+//Copiar os atributos de outra classe para essa
+public ProductDTO(Product entity) {
+    BeanUtils.copyProperties(entity, this);
+}
+//Copiar os atributos de outra classe para essa e adicionar as categorias
+public ProductDTO(Product entity, Set<Category> categories) {
+    this(entity);
+    categories.forEach(x -> this.categories.add(new CategoryDTO(x)));
+}
+```
+### ProductService
+O ProductService tem que ser alterado para retornar o ProductDTO com as categorias.
+```java
+@Transactional(readOnly = true)
+public Page<ProductDTO> findAllPaged(PageRequest pageRequest) {
+    Page<Product> list = productRepository.findAll(pageRequest);
+    //criado uma forma de retornar o produto com as categorias
+    return list.map(x -> {
+        return new ProductDTO(x, new HashSet<>(x.getCategories()));
+    });
+}
+
+@Transactional(readOnly = true)
+public ProductDTO findById(Long id) {
+    Optional<Product> list = productRepository.findById(id);
+    //criado uma forma de retornar o produto com as categorias e se for nulo, lançar uma exception
+    return list.map(x -> {
+        return new ProductDTO(x, new HashSet<>(x.getCategories()));
+    }).orElseThrow(() -> new ResourceNotFoundException("Id " + id + " not found!"));
+}
+```
+
+### Resultados
+#### findAll
+![findAll](assets/image-3.png)
+#### findById
+![findById](assets/image-4.png)
