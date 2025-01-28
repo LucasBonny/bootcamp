@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +30,8 @@ public class ProductService {
 	private CategoryRepository categoryRepository;
 	
 	@Transactional(readOnly = true)
-	public Page<ProductDTO> findAllPaged(PageRequest pageRequest) {
-		Page<Product> list = productRepository.findAll(pageRequest);
+	public Page<ProductDTO> findAllPaged(Pageable pageable) {
+		Page<Product> list = productRepository.findAll(pageable);
 		return list.map(x -> {
 			return new ProductDTO(x, new HashSet<>(x.getCategories()));
 		});
@@ -77,10 +77,10 @@ public class ProductService {
 				throw new ResourceNotFoundException("Id " + id + " not found!");
 			productRepository.deleteById(id);
 		}
-		catch(DataIntegrityViolationException  e) {
+		catch(DataIntegrityViolationException e) {
 			throw new DatabaseException("Product delete error.");
 		}
-		catch(ResourceNotFoundException  e) {
+		catch(ResourceNotFoundException e) {
 			throw new ResourceNotFoundException(e.getMessage());
 		}
 		catch(RuntimeException  e) {
@@ -89,6 +89,7 @@ public class ProductService {
 		
 	}
 	private Product copyDtoToEntity(ProductDTO dto, Product entity) {
+		if(dto.getId() != null) entity.setId(dto.getId());
 		entity.setName(dto.getName());
 		entity.setDescription(dto.getDescription());
 		entity.setPrice(dto.getPrice());

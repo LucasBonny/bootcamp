@@ -58,6 +58,41 @@ GET http://localhost:8080/categories?page=1&linesPerPage=5&direction=DESC&orderB
 
 ![result](assets/image.png)
 
+## Paginação refatorada
+
+### Parâmetros
+- page = 0
+- size = 12
+- sort = name,ASC
+
+```java
+// Camada controller
+@GetMapping
+public ResponseEntity<Page<ProductDTO>> findAll(Pageable pageable) {
+    Page<ProductDTO> list = productService.findAllPaged(pageable);
+    return ResponseEntity.ok().body(list);
+}   
+
+```java
+// Camada service
+	@Transactional(readOnly = true)
+	public Page<ProductDTO> findAllPaged(Pageable pageable) {
+		Page<Product> list = productRepository.findAll(pageable);
+		return list.map(x -> {
+			return new ProductDTO(x, new HashSet<>(x.getCategories()));
+		});
+	}
+
+```
+
+### Resultado
+
+```bash
+GET http://localhost:8080/products?page=0&size=5&sort=id,DESC
+```
+
+![result](assets/image-5.png)
+
 ## Associação muitos para muitos
 
 Na utilização do `@ManyToMany` temos que criar uma tabela intermediaria, que irá armazenar os ids das categorias e dos produtos.
@@ -83,7 +118,7 @@ Set<Category> categories = new HashSet<>();
 //Ao fazer isso o Set já tem como identifcar que seria a classe Category que será associada, pois ela herda de Category.
 ```
 
-## implementando o Product 
+## Capítulo 1 - CRUD 
 
 ### ProductDTO
 
@@ -169,3 +204,186 @@ Fazendo dessa forma a entidade que será salva, terá as categorias que foram pa
 > ```java
 > return new ProductDTO(entity, entity.getCategories());
 > ```
+
+
+## Capítulo 2 - Testes automatizados
+
+### Tipos de testes
+
+- Teste unitário
+- Teste de integração
+- Teste Funcional
+
+1. Teste unitário não pode depender de outros componentes do sistema, somente o componente que estiver sendo testado.
+2. Teste de integração pode acessar todas as camadas do sistema para realizar os testes entre elas, e recursos externos.
+3. Teste Funcional é um teste do ponto de vista do usuário para validar que o sistema responde de forma esperada.
+
+### TDD (Test Driven Development)
+
+O TDD(Desenvolvimento guiado pelos testes) é um método de desenvolvimento de software baseado em testes.
+
+> [!TIP]
+> Não é porque seu software tenha testes, que ele é baseado em TDD.
+> A modelo de desenvolvimento baseada em TDD é a seguinte:
+> 1. Escrever o teste
+> 2. Executar o teste
+> 3. Fazer o código
+> 4. Refatorar o código (Opcional)
+
+### Boas práticas
+
+#### Nomeclatura
+- <Ação> Should <Efeito> [When <Cenário>]
+```java
+//Delete Should Throw Resource Not Found Exception When Id Does Not Exist
+public void deleteShouldThrowResourceNotFoundExceptionWhenIdDoesNotExist() {}
+```
+#### Padrão AAA
+- Arrange - Instanciar dados necessários para realizar o teste
+- Act - Executar o teste
+- Assert - Validar o resultado
+
+```java
+@Test
+public void saveSouldPersistWithAutoincrementWhenIdIsNull() {
+    // Arrange
+    Product product = new Product(26L,"Test1", "Test2", 123.0, "http://local/", Instant.now());
+	product.setId(null);
+    
+    // Act
+    product = repository.save(product);
+    
+    // Assert
+    Assertions.assertNotNull(product.getId());
+    Assertions.assertEquals(countTotalProducts + 1 , product.getId());
+}
+```
+
+#### SOLID - Inversão de Dependência
+- S - Single Responsibility
+- O - Open/Closed
+- L - Liskov Substitution
+- I - Interface Segregation
+- D - Dependency Inversion
+
+Eu não posso depender da implementação de um componente dentro do meu componente atual, para isso será necessário utilizar o Mock para simular a implementação.
+
+### Visão geral de JUnit 5
+
+- O primeiro passo é criar uma classe de testes.
+- A classe pode conter um ou mais métodos com anotação `@Test`.
+- Um método `@Test` deve ser void.
+- O objetivo é que todos os métodos com anotação `@Test` sejam executados sem falhas.
+- O que define se o método passa ou falha são as Assertions.
+
+### Assertions
+
+É a forma utilizada para validar o resultado na aplicação com JUnit.
+
+#### Membros da classe
+- `assertTrue` - usado para validar o resultado (booleano)
+- `assertFalse` - usado para validar o resultado (booleano)
+- `assertNull` - serve para validar se o objeto é nulo
+- `assertNotNull` - serve para validar se o objeto não é nulo
+- `assertEquals` - serve para validar se o resultado é igual ao esperado
+- `assertNotEquals` - serve para validar se o resultado é diferente ao esperado
+- `assertSame` - serve para validar se o objeto é o mesmo
+- `assertNotSame` - serve para validar se o objeto não é o mesmo
+- `assertThrows` - serve para validar se o código lança uma exceção, na qual pode ter um modelo de implementação diferente das outras:
+```java
+@Test
+public void deleteShouldThrowResourceNotFoundExceptionWhenIdDoesNotExist() {
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+        service.delete(100L);
+    });
+}
+```
+
+### Fábrica de objetos 
+
+Para evitar repetição de código, o ideal é criar uma classe de fabrica `tests.Factory` para criar objetos comuns, como o produto nesse caso.
+```java
+public static Product createProduct() {
+    Product product = new Product(1L, "Phone", "Good Phone", 800.0, "https://img.com/img.png", Instant.parse("2020-10-20T03:00:00Z"));
+    return product;
+}
+```
+### Anotações
+
+- `@SpringBootTest` - Indica que o teste é um teste de integração com o Spring Boot(Carrega todos os componentes do Spring Boot).
+
+- `@AutoConfigureMockMvc` - Trata as requisições HTTP sem a necessidade de instanciar o servidor Tomcat, atribuido a anotação `@SpringBootTest`.
+
+- `@WebMvcTest(Controller.class)` - Carrega somente o contexto da camada Web.
+
+- `@ExtendWith(SpringExtension.class)` - Não carrega o contexto mas permite usar os recursos do Spring com o JUnit(service/component).
+
+- `@DataJpaTest` - Carrega somente os componetes relacionados ao Spring Data JPA. Cada teste é transacional e dá rollback automaticamente no final.
+
+
+### Fixtures
+
+- `@BeforeAll` - Executado antes de todos os testes.
+
+- `@AfterAll` - Executado depois de todos os testes.
+
+- `@BeforeEach` - Executado antes de cada teste.
+
+- `@AfterEach` - Executado depois de cada teste.
+
+```java
+//Modelo de teste
+class TesteTest {
+
+    //Antes de todos os testes
+	@BeforeAll
+	static void setUpBeforeClass() throws Exception {
+	}
+
+	//Depois de todos os testes
+	@AfterAll
+	static void tearDownAfterClass() throws Exception {
+	}
+
+	//Antes de cada teste
+	@BeforeEach
+	void setUp() throws Exception {
+	}
+
+	//Depois de cada teste
+	@AfterEach
+	void tearDown() throws Exception {
+	}
+
+	@Test
+	void test() {
+		fail("Not yet implemented");
+	}
+
+}
+```
+### Mockito e Mock
+
+#### Anotações
+
+- `@InjectMocks` - Serve para simular o comportamento de um componente.
+- `@Mock` - Serve para simular o comportamento de uma dependência dentro de um componente de teste.
+- `@Test` - Define um método para ser executado como teste.
+
+#### Mocks
+
+```java
+
+Mockito.when(repository.findAll((Pageable)ArgumentMatchers.any())).thenReturn(page); //Quando findAll(Pageable) for chamado retornar uma implementação de Page
+
+Mockito.when(repository.findById(nonExistingId)).thenReturn(Optional.empty()); //Quando findById(Id Inexistente) for chamado, retornar Optional.empty()
+
+Mockito.doNothing().when(repository).deleteById(existingId); //Quando deleteById(Id Existente) for chamado, não retornar nada
+
+Mockito.doThrow(EmptyResultDataAccessException.class).when(repository).deleteById(nonExistingId); //Quando deleteById(Id Inexistente) for chamado, lançar EmptyResultDataAccessException
+```
+- `when` - usado para definir o comportamento de um mock.
+- `then` - usado para validar o resultado do mock.
+- `thenReturn` - usado para retornar um valor quando o mock for chamado.
+- `doNothing` - usado para não fazer nada quando o mock for chamado.
+- `doThrow` - usado para lançar uma exceção quando o mock for chamado.
