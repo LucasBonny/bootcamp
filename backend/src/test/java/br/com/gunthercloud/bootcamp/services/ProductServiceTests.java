@@ -26,6 +26,7 @@ import br.com.gunthercloud.bootcamp.entitites.dto.ProductDTO;
 import br.com.gunthercloud.bootcamp.repositories.CategoryRepository;
 import br.com.gunthercloud.bootcamp.repositories.ProductRepository;
 import br.com.gunthercloud.bootcamp.repositories.tests.Factory;
+import br.com.gunthercloud.bootcamp.services.exceptions.DatabaseException;
 import br.com.gunthercloud.bootcamp.services.exceptions.ResourceNotFoundException;
 
 @ExtendWith(SpringExtension.class)
@@ -61,10 +62,41 @@ public class ProductServiceTests {
 		Mockito.when(repository.findById(existingId)).thenReturn(Optional.of(product)); // Quando findById for chamado com o parametro existingId retornar um optional<ProductDTO> product
 		Mockito.when(repository.findById(nonExistingId)).thenReturn(Optional.empty()); // Quando findById for chamado com o parametro nonExistingId retornar um optional vazio
 		
-		Mockito.when(categoryRepository.getReferenceById(1L)).thenReturn(category);
+		Mockito.doThrow(DatabaseException.class).when(repository).deleteById(dependentId);
+
+		Mockito.when(repository.getReferenceById(existingId)).thenReturn(product);
+		
+		Mockito.when(categoryRepository.getReferenceById(existingId)).thenReturn(category);
+		Mockito.when(categoryRepository.getReferenceById(nonExistingId)).thenThrow(ResourceNotFoundException.class);
 		
 		Mockito.when(repository.save(ArgumentMatchers.any())).thenReturn(product); // Quando eu chamar repository.save(ArgumentMatchers.any()) é pra retornar o product
 		
+	}
+	
+	@Test
+	@DisplayName("update deveria lançar ResourceNotFoundException quando o id não existir")
+	public void updateShouldThrowResourceNotFoundExceptionWhenIdDoesNotExist() {
+		
+		Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+			service.update(nonExistingId, Factory.createProductDTO());
+		});
+	}
+	
+	@Test
+	@DisplayName("update deveria retornar um ProductDTO quando o id existir")
+	public void updateShouldReturnProductDTOWhenIdExists() {
+		ProductDTO obj = service.update(existingId, Factory.createProductDTO());
+		
+		Assertions.assertNotNull(obj);
+	}
+	
+	@Test
+	@DisplayName("delete deveria lançar DatabaseException quando id tem dependência")
+	public void deleteShouldThrowExceptionWhenIdIsDependent() {
+
+		Assertions.assertThrows(DatabaseException.class, () -> {
+			repository.deleteById(dependentId);
+		});
 	}
 	
 	@Test
@@ -76,7 +108,7 @@ public class ProductServiceTests {
 		Page<ProductDTO> product = service.findAllPaged(pageable);
 
 		Mockito.verify(repository, times(1)).findAll(pageable);
-		
+		Assertions.assertNotNull(product);
 	}
 	
 	@Test
@@ -106,9 +138,7 @@ public class ProductServiceTests {
 		
 		ProductDTO p = Factory.createProductDTO();
 
-		System.out.println(p.getId());
 		ProductDTO result = service.insert(p);
-		System.out.println(result.getId());
 
 		Assertions.assertFalse(result.getCategories().isEmpty());
 		Assertions.assertNotNull(result.getId());

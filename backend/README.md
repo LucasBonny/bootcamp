@@ -373,7 +373,6 @@ class TesteTest {
 #### Mocks
 
 ```java
-
 Mockito.when(repository.findAll((Pageable)ArgumentMatchers.any())).thenReturn(page); //Quando findAll(Pageable) for chamado retornar uma implementação de Page
 
 Mockito.when(repository.findById(nonExistingId)).thenReturn(Optional.empty()); //Quando findById(Id Inexistente) for chamado, retornar Optional.empty()
