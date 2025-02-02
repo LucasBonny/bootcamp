@@ -1,6 +1,10 @@
 package br.com.gunthercloud.bootcamp.services;
 
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
@@ -57,20 +61,24 @@ public class ProductServiceTests {
 		product = Factory.createProduct(); // instanciando um objeto de produto
 		page = new PageImpl<>(List.of(product)); // instanciando um Pageable com 1 objeto de product
 
-		Mockito.when(repository.findAll((Pageable)ArgumentMatchers.any())).thenReturn(page); //Quando findAll(Pageable) for chamado retornar PageImpl
+		when(repository.findAll((Pageable)ArgumentMatchers.any())).thenReturn(page); //Quando findAll(Pageable) for chamado retornar PageImpl
 		
-		Mockito.when(repository.findById(existingId)).thenReturn(Optional.of(product)); // Quando findById for chamado com o parametro existingId retornar um optional<ProductDTO> product
-		Mockito.when(repository.findById(nonExistingId)).thenReturn(Optional.empty()); // Quando findById for chamado com o parametro nonExistingId retornar um optional vazio
+		when(repository.findById(existingId)).thenReturn(Optional.of(product)); // Quando findById for chamado com o parametro existingId retornar um optional<ProductDTO> product
+		when(repository.findById(nonExistingId)).thenReturn(Optional.empty()); // Quando findById for chamado com o parametro nonExistingId retornar um optional vazio
 		
-		Mockito.doThrow(DatabaseException.class).when(repository).deleteById(dependentId);
+		doThrow(DatabaseException.class).when(repository).deleteById(dependentId);
 
-		Mockito.when(repository.getReferenceById(existingId)).thenReturn(product);
+		when(repository.getReferenceById(existingId)).thenReturn(product);
 		
-		Mockito.when(categoryRepository.getReferenceById(existingId)).thenReturn(category);
-		Mockito.when(categoryRepository.getReferenceById(nonExistingId)).thenThrow(ResourceNotFoundException.class);
+		when(categoryRepository.getReferenceById(existingId)).thenReturn(category);
+		when(categoryRepository.getReferenceById(nonExistingId)).thenThrow(ResourceNotFoundException.class);
 		
-		Mockito.when(repository.save(ArgumentMatchers.any())).thenReturn(product); // Quando eu chamar repository.save(ArgumentMatchers.any()) é pra retornar o product
-		
+		when(repository.save(ArgumentMatchers.any())).thenReturn(product); // Quando eu chamar repository.save(ArgumentMatchers.any()) é pra retornar o product
+
+		when(repository.existsById(existingId)).thenReturn(true);
+		doNothing().when(repository).deleteById(existingId);
+		when(repository.existsById(nonExistingId)).thenThrow(ResourceNotFoundException.class);
+		when(repository.existsById(dependentId)).thenThrow(DatabaseException.class);
 	}
 	
 	@Test
@@ -89,14 +97,39 @@ public class ProductServiceTests {
 		
 		Assertions.assertNotNull(obj);
 	}
+
+	@Test
+	@DisplayName("delete deveria fazer nada quando id existe")
+	public void deleteShouldDoNothingWhenIdExists() {
+
+		
+		Assertions.assertDoesNotThrow(() -> {
+			service.delete(existingId);
+		});
+		
+		verify(repository, Mockito.times(1)).deleteById(existingId);
+		
+	}
+	@Test
+	@DisplayName("delete deveria lançar ResourceNotFoundException quando id não existe")
+	public void deleteShouldThrowExceptionWhenIdDoesNotExist() {
+
+		Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+			service.delete(nonExistingId);
+			verify(repository, Mockito.never()).deleteById(nonExistingId);
+		});
+		
+	}
 	
 	@Test
 	@DisplayName("delete deveria lançar DatabaseException quando id tem dependência")
 	public void deleteShouldThrowExceptionWhenIdIsDependent() {
 
 		Assertions.assertThrows(DatabaseException.class, () -> {
-			repository.deleteById(dependentId);
+			service.delete(dependentId);
+			verify(repository, Mockito.times(1)).deleteById(dependentId);
 		});
+
 	}
 	
 	@Test
@@ -107,7 +140,7 @@ public class ProductServiceTests {
 		
 		Page<ProductDTO> product = service.findAllPaged(pageable);
 
-		Mockito.verify(repository, times(1)).findAll(pageable);
+		verify(repository, times(1)).findAll(pageable);
 		Assertions.assertNotNull(product);
 	}
 	
@@ -117,7 +150,7 @@ public class ProductServiceTests {
 		
 		ProductDTO result = service.findById(existingId);
 
-		Mockito.verify(repository).findById(existingId);
+		verify(repository).findById(existingId);
 		Assertions.assertEquals(existingId, result.getId());
 		Assertions.assertEquals(product.getName(), result.getName());
 			

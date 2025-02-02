@@ -318,7 +318,7 @@ public static Product createProduct() {
 
 - `@ExtendWith(SpringExtension.class)` - Não carrega o contexto mas permite usar os recursos do Spring com o JUnit(service/component).
 
-- `@DataJpaTest` - Carrega somente os componetes relacionados ao Spring Data JPA. Cada teste é transacional e dá rollback automaticamente no final.
+- `@DataJpaTest` - Carrega somente os componetes relacionados ao Spring Data JPA. Cada teste é transacional e dá rollback automaticamente no final().
 
 
 ### Fixtures
@@ -362,7 +362,7 @@ class TesteTest {
 
 }
 ```
-### Mockito e Mock
+### Mockito e Mock - Repository
 
 #### Anotações
 
@@ -386,3 +386,13 @@ Mockito.doThrow(EmptyResultDataAccessException.class).when(repository).deleteByI
 - `thenReturn` - usado para retornar um valor quando o mock for chamado.
 - `doNothing` - usado para não fazer nada quando o mock for chamado.
 - `doThrow` - usado para lançar uma exceção quando o mock for chamado.
+
+### Mockito e Mock - Service
+```java
+@Test
+public void findAllShouldReturnPage() {
+    Page<Product> page = new PageImpl<>(Collections.singletonList(createProduct()));
+    when(repository.findAll((Pageable)ArgumentMatchers.any())).thenReturn(page);
+    
+    service.findAll();
+}
