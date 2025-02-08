@@ -362,7 +362,7 @@ class TesteTest {
 
 }
 ```
-### Mockito e Mock - Repository
+### Teste unitário - Repository
 
 #### Anotações
 
@@ -387,12 +387,114 @@ Mockito.doThrow(EmptyResultDataAccessException.class).when(repository).deleteByI
 - `doNothing` - usado para não fazer nada quando o mock for chamado.
 - `doThrow` - usado para lançar uma exceção quando o mock for chamado.
 
-### Mockito e Mock - Service
+### Teste unitário - Service
+
+Modelo de um teste da camada service.
+```java
+@ExtendWith(SpringExtension.class) // Indica que é um teste unitário da camada service usando os recursos do Spring
+public class ProductServiceTests {
+
+	@InjectMocks // Simula o comportamento de um componente
+	private ProductService service;
+	
+	@Mock // Simula o comportamento de uma dependência
+	private ProductRepository repository;
+	
+}
+```
+Modelo de um teste do service
+
 ```java
 @Test
-public void findAllShouldReturnPage() {
-    Page<Product> page = new PageImpl<>(Collections.singletonList(createProduct()));
-    when(repository.findAll((Pageable)ArgumentMatchers.any())).thenReturn(page);
+@DisplayName("findAllPaged deveria retornar uma lista paginada")
+public void findAllPagedShouldReturnPage() {
     
-    service.findAll();
+    Pageable pageable = PageRequest.of(0, 10); // Cria um objeto PageRequest
+    
+    Page<ProductDTO> product = service.findAllPaged(pageable); // Chama o método findAllPaged
+
+    Mockito.verify(repository, times(1)).findAll(pageable); // Verifica se o mock foi chamado 1 vez
+    Assertions.assertNotNull(product); // Verifica se o resultado não é nulo
 }
+```
+### Teste unitário - Resource
+
+Usar a anotação `@WebMvcTest(Classe.class)` para criar um teste unitário de uma camada web. 
+Para podermos fazer teste da camada resource, será necessário
+
+```java
+@WebMvcTest(ProductResourceTests.class)
+public class ProductResourceTests {
+	
+	@BeforeEach
+	public void setUp() throws Exception {
+		
+	}
+	
+	@Test
+	public void anyThing() {
+		
+	}
+
+}
+```
+
+Pra fazer teste na camada web, iremos fazer requisções HTTP e a melhor abordagem usada é instanciando o `MockMvc` na classe de testes.
+
+```java
+@Autowired
+private MockMvc mockMvc;
+
+@MockitoBean
+private ProductService service;
+```
+> [!IMPORTANT]
+> O uso do @Mock é mais adequado em testes de unidade da camada service, já na camada web é mais adequado o uso do `@MockitoBean`.
+
+Para fazer os testes nessa camada é necessário utilizar o `MockMvc` para simular as requisições HTTP e fazer as validações.
+
+
+```java
+@Test
+void anyThing() throws Exception {
+    mockMvc.perform(get("/products") // Simula uma requisição HTTP
+	    .accept(MediaType.APPLICATION_JSON)) // Define o tipo de conteúdo esperado
+        .andExpect(status().isOk()) // Valida o status da resposta é 200
+        .andExpect(jsonPath("$.content").exists()); // Valida se no corpo da resposta existe um conteúdo
+}
+```
+
+Teste com id não existente deve validar se a resposta é 404.
+```java
+@Test
+void anyThing() throws Exception {
+    mockMvc.perform(get("/products/{id}", nonExistingId) // Simula uma requisição HTTP
+        .accept(MediaType.APPLICATION_JSON)) // Define o tipo de conteúdo esperado
+        .andExpect(status().isNotFound()); // Valida o status da resposta é 404
+}
+```
+
+Atualizar com id existente deve validar se a resposta é 200 e se o produto foi atualizado.
+```java
+@Test
+void anyThing() throws Exception {
+
+    String json = new ObjectMapper().writeValueAsString(productDTO); // Converte o objeto para JSON
+
+    mockMvc.perform(get("/products/{id}", existingId) // Simula uma requisição HTTP
+        .content(json)
+        .contentType(MediaType.APPLICATION_JSON)
+        .accept(MediaType.APPLICATION_JSON)) // Define o tipo de conteúdo esperado
+        .andExpect(status().isOk()) // Valida o status da resposta é 200
+        .andExpect(jsonPath("$.id").exists()); // Valida se no corpo da resposta existe um id
+}
+```
+
+
+### Resumo
+
+- Teste unitário da camada **Repository** utiliza `@Autowired` para simular o comportamento do componente. 
+
+- Teste unitário da camada **Service** utiliza `@InjectMocks` para simular o comportamento do componente e `@Mock` para simular a dependência. 
+
+- Teste unitário da camada **Resource** utiliza `@@Autowired` com o MockMvc para simular a requisição HTTP e `@MockitoBean` para simular o comportamento de uma dependência. 
