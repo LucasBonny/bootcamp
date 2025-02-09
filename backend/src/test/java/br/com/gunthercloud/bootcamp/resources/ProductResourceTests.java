@@ -48,7 +48,6 @@ public class ProductResourceTests {
 	private ProductDTO productDTO;
 	private PageImpl<ProductDTO> page;
 	
-	private String json;
 	private Long existingId;
 	private Long nonExistingId;
 	private Long dependentId;

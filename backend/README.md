@@ -498,3 +498,30 @@ void anyThing() throws Exception {
 - Teste unitário da camada **Service** utiliza `@InjectMocks` para simular o comportamento do componente e `@Mock` para simular a dependência. 
 
 - Teste unitário da camada **Resource** utiliza `@@Autowired` com o MockMvc para simular a requisição HTTP e `@MockitoBean` para simular o comportamento de uma dependência. 
+
+
+### Teste de integração
+
+```java
+@Test
+public void findAllShouldReturnSortedPageWhenSortByName() throws Exception {
+    var result = mockMvc.perform(get("/products?page=0&size=12&sort=name,asc") // Simula uma requisição HTTP
+        .accept(MediaType.APPLICATION_JSON));
+    
+        result.andExpect(jsonPath("$.totalElements").value(countTotalProducts)); // Verifica se o total de elementos é o esperado
+        result.andExpect(jsonPath("$.content").exists()); // Verifica se o conteúdo existe
+        result.andExpect(jsonPath("$.content[0]").value("Macbook Pro")); // Verifica se o primeiro elemento é o esperado
+}
+```
+
+### Considerações finais
+
+ #### Atividade
+findAll sorted by name (asc)
+```java
+@Transactional
+public List<DepartmentDTO> findAll() {
+    List<Department> list = repository.findAll(Sort.by("name"));
+    return list.stream().map(x -> new DepartmentDTO(x)).toList();
+}
+```
