@@ -525,3 +525,18 @@ public List<DepartmentDTO> findAll() {
     return list.stream().map(x -> new DepartmentDTO(x)).toList();
 }
 ```
+
+## Capítulo 3 - Validação e Segurança
+
+### Modelo Conceitual
+
+![model](assets/image-6.png)
+
+Associação direcionada de User para Role
+```java
+@ManyToMany
+@JoinTable(name = "tb_user_role", // Nome da tabela
+    joinColumns = @JoinColumn(name = "user_id"), // Nome da coluna da tabela atual
+    inverseJoinColumns = @JoinColumn(name = "role_id")) // Nome da coluna da tabela inversa
+private Set<Role> roles = new HashSet<>();
+```
