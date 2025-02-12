@@ -12,9 +12,12 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/**").permitAll() // Permite todas as requisições
+                .requestMatchers("/h2-console/**").permitAll() // Libera o H2 Console
+                .requestMatchers("/**").permitAll() // Libera todos os endpoints da API
+                .anyRequest().authenticated() // Mantém autenticação para outras rotas
             )
-            .csrf(csrf -> csrf.disable()); // Desativa CSRF caso não seja necessário
+            .csrf(csrf -> csrf.disable()) // Desativa CSRF para facilitar o uso da API
+            .headers(headers -> headers.disable()); // Permite iframes (H2 Console)
 
         return http.build();
     }

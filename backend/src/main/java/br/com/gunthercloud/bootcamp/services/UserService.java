@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.gunthercloud.bootcamp.entitites.User;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserDTO;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserInsertDTO;
+import br.com.gunthercloud.bootcamp.repositories.RoleRepository;
 import br.com.gunthercloud.bootcamp.repositories.UserRepository;
 import br.com.gunthercloud.bootcamp.services.exceptions.ResourceNotFoundException;
 
@@ -20,6 +21,9 @@ public class UserService {
 
 	@Autowired
 	private UserRepository repository;
+	
+	@Autowired
+	private RoleRepository roleRepository;
 	
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
@@ -39,6 +43,7 @@ public class UserService {
 	
 	@Transactional
 	public UserDTO insert(UserInsertDTO dto) {
+		dto.getRoles().forEach(x -> x.setAuthority(roleRepository.findById(x.getId()).get().getAuthority()));
 		User entity = new User(dto);
 		entity.setPassword(passwordEncoder.encode(dto.getPassword()));
 		entity = repository.save(entity);
@@ -46,10 +51,12 @@ public class UserService {
 	}
 	
 	@Transactional
-	public UserDTO update(Long id, UserDTO obj) {
+	public UserDTO update(Long id, UserDTO dto) {
+		dto.getRoles().forEach(x -> x.setAuthority(roleRepository.findById(x.getId()).get().getAuthority()));
 		if(repository.findById(id).isEmpty())
 			throw new ResourceNotFoundException("Entity not found " + id);
-		User entity = repository.save(new User(obj));
+		dto.setId(id);
+		User entity = repository.save(new User(dto));
 		return new UserDTO(entity);
 	}
 

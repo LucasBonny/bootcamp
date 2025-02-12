@@ -3,6 +3,7 @@ package br.com.gunthercloud.bootcamp.entitites;
 import java.io.Serializable;
 import java.util.Objects;
 
+import br.com.gunthercloud.bootcamp.entitites.dto.RoleDTO;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,6 +27,10 @@ public class Role implements Serializable {
 	public Role(Long id, String authority) {
 		this.id = id;
 		this.authority = authority;
+	}
+	public Role(RoleDTO obj) {
+		this.id = obj.getId();
+		this.authority = obj.getAuthority();
 	}
 
 	public Long getId() {

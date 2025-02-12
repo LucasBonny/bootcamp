@@ -8,6 +8,7 @@ import java.util.Set;
 import org.springframework.beans.BeanUtils;
 
 import br.com.gunthercloud.bootcamp.entitites.dto.UserDTO;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -28,6 +29,7 @@ public class User implements Serializable {
 	private Long id;
 	private String firstName;
 	private String lastName;
+	@Column(unique = true)
 	private String email;
 	private String password;
 	
@@ -49,6 +51,7 @@ public class User implements Serializable {
 
 	public User(UserDTO dto) {
 		BeanUtils.copyProperties(dto, this);
+		dto.getRoles().forEach(x -> this.roles.add(new Role(x)));
 	}
 
 	public Long getId() {

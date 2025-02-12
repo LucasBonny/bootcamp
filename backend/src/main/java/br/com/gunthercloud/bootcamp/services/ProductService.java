@@ -59,6 +59,7 @@ public class ProductService {
 		try {			
 			Product entity = productRepository.getReferenceById(id);
 			copyDtoToEntity(obj, entity);
+			obj.setId(id);
 			productRepository.save(entity);
 			return new ProductDTO(entity, entity.getCategories());
 		}
