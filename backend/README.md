@@ -649,3 +649,9 @@ public UserDTO insert(UserInsertDTO dto) {
 >}
 > ```
 
+### Beans Validation
+```java
+@Validated
+public class UserInsertDTO {
+    
+}

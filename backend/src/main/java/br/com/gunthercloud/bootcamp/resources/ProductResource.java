@@ -19,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import br.com.gunthercloud.bootcamp.entitites.dto.ProductDTO;
 import br.com.gunthercloud.bootcamp.services.ProductService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping(value = "/products")
@@ -39,14 +40,14 @@ public class ProductResource {
 	}
 	
 	@PostMapping
-	public ResponseEntity<ProductDTO> insert(@RequestBody ProductDTO obj) {
+	public ResponseEntity<ProductDTO> insert(@Valid @RequestBody ProductDTO obj) {
 		ProductDTO cat = productService.insert(obj);
 		URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(cat.getId()).toUri();
 		return ResponseEntity.created(uri).body(cat);
 	}
 	
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<ProductDTO> alterar(@PathVariable Long id, @RequestBody ProductDTO obj) {
+	public ResponseEntity<ProductDTO> alterar(@PathVariable Long id, @Valid @RequestBody ProductDTO obj) {
 		obj = productService.update(id, obj);
 		return ResponseEntity.status(HttpStatus.OK).body(obj);
 	}

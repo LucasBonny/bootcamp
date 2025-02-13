@@ -20,6 +20,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserDTO;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserInsertDTO;
 import br.com.gunthercloud.bootcamp.services.UserService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping(value = "/users")
@@ -40,14 +41,14 @@ public class UserResource {
 	}
 	
 	@PostMapping
-	public ResponseEntity<UserDTO> insert(@RequestBody UserInsertDTO obj) {
+	public ResponseEntity<UserDTO> insert(@Valid @RequestBody UserInsertDTO obj) {
 		UserDTO cat = userService.insert(obj);
 		URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(cat.getId()).toUri();
 		return ResponseEntity.created(uri).body(cat);
 	}
 	
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<UserDTO> alterar(@PathVariable Long id, @RequestBody UserDTO obj) {
+	public ResponseEntity<UserDTO> alterar(@PathVariable Long id, @Valid @RequestBody UserDTO obj) {
 		obj = userService.update(id, obj);
 		return ResponseEntity.status(HttpStatus.OK).body(obj);
 	}

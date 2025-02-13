@@ -36,6 +36,8 @@ public class CategoryService {
 
 	@Transactional
 	public CategoryDTO insert(CategoryDTO obj) {
+		if(obj.getId() != null)
+			obj.setId(null);
 		Category c = categoryRepository.save(new Category(obj));
 		return new CategoryDTO(c);
 	}
@@ -45,6 +47,8 @@ public class CategoryService {
 		try {			
 			Category c = categoryRepository.getReferenceById(id);
 			c = new Category(obj);
+			if(obj.getId() != null)
+				obj.setId(null);
 			c.setId(id);
 			categoryRepository.save(c);
 			return new CategoryDTO(c);

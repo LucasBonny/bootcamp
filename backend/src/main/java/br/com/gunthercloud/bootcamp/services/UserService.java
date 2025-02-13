@@ -46,6 +46,8 @@ public class UserService {
 	@Transactional
 	public UserDTO insert(UserInsertDTO dto) {
 		dto.getRoles().forEach(x -> x.setAuthority(roleRepository.findById(x.getId()).get().getAuthority()));
+		if(dto.getId() != null)
+			dto.setId(null);
 		User entity = new User(dto);
 		entity.setPassword(passwordEncoder.encode(dto.getPassword()));
 		entity = repository.save(entity);
@@ -57,6 +59,8 @@ public class UserService {
 		dto.getRoles().forEach(x -> x.setAuthority(roleRepository.findById(x.getId()).get().getAuthority()));
 		if(repository.findById(id).isEmpty())
 			throw new ResourceNotFoundException("Entity not found " + id);
+		if(dto.getId() != null)
+			dto.setId(null);
 		dto.setId(id);
 		User entity = repository.save(new User(dto));
 		return new UserDTO(entity);

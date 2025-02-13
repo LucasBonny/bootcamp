@@ -48,6 +48,8 @@ public class ProductService {
 
 	@Transactional
 	public ProductDTO insert(ProductDTO obj) {
+		if(obj.getId() != null)
+			obj.setId(null);
 		Product entity = new Product();
 		copyDtoToEntity(obj, entity);
 		productRepository.save(entity);
@@ -59,6 +61,8 @@ public class ProductService {
 		try {			
 			Product entity = productRepository.getReferenceById(id);
 			copyDtoToEntity(obj, entity);
+			if(obj.getId() != null)
+				obj.setId(null);
 			obj.setId(id);
 			productRepository.save(entity);
 			return new ProductDTO(entity, entity.getCategories());
