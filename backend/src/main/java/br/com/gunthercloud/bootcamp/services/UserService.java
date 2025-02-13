@@ -3,6 +3,7 @@ package br.com.gunthercloud.bootcamp.services;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -14,6 +15,7 @@ import br.com.gunthercloud.bootcamp.entitites.dto.UserDTO;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserInsertDTO;
 import br.com.gunthercloud.bootcamp.repositories.RoleRepository;
 import br.com.gunthercloud.bootcamp.repositories.UserRepository;
+import br.com.gunthercloud.bootcamp.services.exceptions.DatabaseException;
 import br.com.gunthercloud.bootcamp.services.exceptions.ResourceNotFoundException;
 
 @Service
@@ -62,6 +64,17 @@ public class UserService {
 
 	@Transactional
 	public void delete(Long id) {
-		repository.deleteById(id);
+		try{
+			if (repository.findById(id).isEmpty()) {
+				throw new ResourceNotFoundException("Entity not found " + id);
+			}
+			repository.deleteById(id);
+		}
+		catch(ResourceNotFoundException e) {
+			throw new ResourceNotFoundException("Entity not found " + id);
+		}
+		catch(DataIntegrityViolationException e) {
+			throw new DatabaseException("Integrity violation");
+		}
 	}
 }

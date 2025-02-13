@@ -516,7 +516,7 @@ public void findAllShouldReturnSortedPageWhenSortByName() throws Exception {
 
 ### Considerações finais
 
- #### Atividade
+#### Atividade
 findAll sorted by name (asc)
 ```java
 @Transactional
@@ -532,11 +532,120 @@ public List<DepartmentDTO> findAll() {
 
 ![model](assets/image-6.png)
 
+### Associação e Seeding
+
 Associação direcionada de User para Role
 ```java
-@ManyToMany
+@ManyToMany(fetch = FetchType.EAGER) // EAGER para carregar todos os dados
 @JoinTable(name = "tb_user_role", // Nome da tabela
-    joinColumns = @JoinColumn(name = "user_id"), // Nome da coluna da tabela atual
-    inverseJoinColumns = @JoinColumn(name = "role_id")) // Nome da coluna da tabela inversa
+joinColumns = @JoinColumn(name = "user_id"), // Nome da coluna da tabela atual
+inverseJoinColumns = @JoinColumn(name = "role_id")) // Nome da coluna da tabela inversa
 private Set<Role> roles = new HashSet<>();
+
+public Set<Role> getRoles() {
+    return roles;
+}
 ```
+> [!TIP]
+> O EAGER serve para carregar todos os dados pendurados na tabela de relacionamento para dentro do objeto.
+
+Prefixo usado pelo Spring Security:
+```SQL
+INSERT INTO tb_role (authority) VALUES ('ROLE_OPERATOR');
+INSERT INTO tb_role (authority) VALUES ('ROLE_ADMIN');
+```
+
+### Uso de herança com User
+
+Para termos boa prática em trafegar o usuário na camada DTO, iremos criar uma UserDTO sem o atributo password.
+
+```java
+public class UserDTO implements Serializable{
+	private static final long serialVersionUID = 1L;
+	
+	private Long id;
+	private String firstName;
+	private String lastName;
+	private String email;
+	
+	Set<RoleDTO> roles = new HashSet<>();
+
+    //...	
+}
+```
+e com isso, podemos iniciar a criação do modelo InsertUserDTO que será usado somente para a criação de usuário.
+
+```java
+public class UserInsertDTO extends UserDTO {
+	private static final long serialVersionUID = 1L;
+	
+	private String password;
+
+    public UserDTO() {
+        super(); // garante que se o construtor da classe pai tiver alguma lógica, ele seja executado
+    }
+	
+	public UserInsertDTO(Long id, String firstName, String lastName, String email, String password) {
+		super(id, firstName, lastName, email); // Repossa os parametros para a classe pai
+		this.password = password; // Atribui o valor para o atributo password da classe
+	}
+}
+```
+### Configuração para o uso da Autenticação
+Após criar o `UserDTO` e o `UserInsertDTO` podemos alterar o `insert` para armazenar no banco de dados o usuário com a senha codificada e nas demais não trafegar a senha. 
+```java
+@Transactional
+public UserDTO insert(UserInsertDTO dto) {
+    dto.getRoles().forEach(x -> x.setAuthority(roleRepository.findById(x.getId()).get().getAuthority()));
+    User entity = new User(dto);
+    entity.setPassword(passwordEncoder.encode(dto.getPassword())); // Codifica a senha e salva dentro do entity
+    entity = repository.save(entity); // Salva o entity no banco de dados
+    return new UserDTO(entity);
+}
+```
+> [!IMPORTANT]
+> O `passwordEncoder.encode(dto.getPassword())` é usado para codificar a senha do usuário, o que é necessário para o banco de dados armazenar a senha criptografada.
+> E para usar o `passwordEncoder` precisa ser injetado na classe `UserService` e para isso precisamos fazer 4 passos.
+> 1. Importar o Spring Security no `pom.xml`.
+> ```xml
+> <dependency>
+> 	<groupId>org.springframework.boot</groupId>
+> 	<artifactId>spring-boot-starter-security</artifactId>
+> </dependency>
+>  ```
+> 2. Criar um bean para o `passwordEncoder` no pacote `config`.
+> ```java
+> @Configuration
+> public class AppConfig {
+>	@Bean // Anotação para tornar o método um componente spring para poder ser injetado dentro de outros componentes
+>	BCryptPasswordEncoder passwordEncoder() {
+>		return new BCryptPasswordEncoder(); // Retorna uma instância do BCryptPasswordEncoder
+>	}
+>}
+> ```
+> 3. Criar uma dependência no `UserService` de `BCryptPasswordEncoder` para poder usar o `passwordEncoder` no `insert`.
+> ```java
+>@Autowired
+>private BCryptPasswordEncoder passwordEncoder;
+> ```
+> 4. Criar uma classe para configurar as permissões do Spring Security.
+> ```java
+> @Configuration
+> public class SecurityConfig {
+>
+> @Bean
+> SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+>   http
+>    .authorizeHttpRequests(auth -> auth
+>    .requestMatchers("/h2-console/**").permitAll() // Libera o H2 Console
+>    .requestMatchers("/**").permitAll() // Libera todos os endpoints da API
+>    .anyRequest().authenticated() // Mantém autenticação para outras rotas
+>           )
+>    .csrf(csrf -> csrf.disable()) // Desativa CSRF para facilitar o uso da API
+>    .headers(headers -> headers.disable()); // Permite iframes (H2 Console)
+>
+>    return http.build();
+>    }
+>}
+> ```
+
