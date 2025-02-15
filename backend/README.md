@@ -650,8 +650,91 @@ public UserDTO insert(UserInsertDTO dto) {
 > ```
 
 ### Beans Validation
+Validação de dados
 ```java
-@Validated
-public class UserInsertDTO {
-    
+@NotNull 
+@Digits 
+@NotBlank
+@NotEmpty
+@NegativeOrZero
+@Email 
+@Pattern(regexp = "EXPRESSÃO REGULAR") 
+```
+
+Modelo 
+
+```java
+@NotBlank(message = "Campo obrigatório") // valida se o usuário não colocou vários espaços em branco sem outro caracter válido
+private String firstName;
+
+@Email(message = "Email inválido") // valida se o email é válido
+private String email;
+```
+
+```java
+@Positive(message = "O valor deve ser positivo") // valida se o valor é positivo
+private Double price;
+
+@Size(min = 5, max = 60, message = "O nome deve ter entre 5 e 60 caracteres") // valida se o nome está entre 5 e 60 caracteres
+@NotBlank(message = "Campo obrigatório") // valida se o usuário não colocou vários espaços em branco sem outro caracter válido
+private String name;
+
+@PastOrPresent(message = "Data inválida") // valida se a data é passada ou presente
+private Instant date;
+
+```
+
+Para funcionar precisamos ir na camada Controller e dizer que as regras impostas na entidade ou na classe DTO deverão ser consideradas para o funcionamento adequado do endpoint, e para isso, iremos utilizar o `@Valid` onde tem o parâmetro em questão.
+
+```java
+@PostMapping
+public ResponseEntity<UserDTO> insert(@Valid @RequestBody UserInsertDTO obj) { // parâmetro da classe insert
+    UserDTO cat = userService.insert(obj);
+    URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(cat.getId()).toUri();
+    return ResponseEntity.created(uri).body(cat);
 }
+```
+
+Agora quando for feito a validação, caso algum campo não seja válido, a resposta do endpoint irá ser 400 Bad Request com uma mensagem de erro detalhada sobre o campo que não foi validado além de outras informações adicionais.
+
+E com isso vem uma `MethodArgumentNotValidException`, e para podermos manipular as devidas informações dessa excessão na resposta do endpoint, iremos utilizar o `@ExceptionHandler` onde podemos capturar a excessão e manipular as informações da mesma.
+
+```java
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public ResponseEntity<ValidationError> validation(MethodArgumentNotValidException e, HttpServletRequest request) {
+    HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+    ValidationError err = new ValidationError();
+    err.setTimestamp(Instant.now()); // Define o timestamp
+    err.setStatus(status.value()); // Define o status
+    err.setError("Validation Exception"); // Define o erro
+    err.setMessage(e.getMessage()); // Define a mensagem
+    err.setPath(request.getRequestURI()); // Define o caminho
+
+    for(FieldError f : e.getBindingResult().getFieldErrors()) { // Para cada erro no resultado do binding
+        err.addError(f.getField(), f.getDefaultMessage()); // Adiciona o erro ao objeto de erro
+    }
+
+    return ResponseEntity.status(status).body(err); // Retorna a resposta com o status e o objeto de erro
+}
+```
+> [!TIP]
+> Para pegar os erros específicos de cada campo, basta utilizar o `e.getBindingResult().getFieldErrors()`.
+
+Além disso será necessário criar o ValidationError.
+
+```java
+public class ValidationError extends StandardError {
+	private static final long serialVersionUID = 1L;
+	
+	private List<FieldMessage> field = new ArrayList<>();
+
+	public List<FieldMessage> getField() {
+		return field;
+	}
+	
+	public void addError(String fieldName, String message) {
+		field.add(new FieldMessage(fieldName, message));
+	}
+	
+}
+```
