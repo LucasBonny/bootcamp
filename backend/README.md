@@ -697,7 +697,7 @@ public ResponseEntity<UserDTO> insert(@Valid @RequestBody UserInsertDTO obj) { /
 
 Agora quando for feito a validação, caso algum campo não seja válido, a resposta do endpoint irá ser 400 Bad Request com uma mensagem de erro detalhada sobre o campo que não foi validado além de outras informações adicionais.
 
-E com isso vem uma `MethodArgumentNotValidException`, e para podermos manipular as devidas informações dessa excessão na resposta do endpoint, iremos utilizar o `@ExceptionHandler` onde podemos capturar a excessão e manipular as informações da mesma.
+E com isso vem uma `MethodArgumentNotValidException`, e para podermos manipular as devidas informações dessa exceção na resposta do endpoint, iremos utilizar o `@ExceptionHandler` onde podemos capturar a exceção e manipular as informações da mesma.
 
 ```java
 @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -736,5 +736,72 @@ public class ValidationError extends StandardError {
 		field.add(new FieldMessage(fieldName, message));
 	}
 	
+}
+```
+
+#### Implementando um constraintValidator customizado
+
+Quando utilizamos o `@Valid` no paramêtro de uma função, será feito uma validação para ver se está tudo ok, caso não esteja, a função não executa e lança uma exceção e nesse caso em específico a validação é feito pela sintaxe, mas queremos validar os dados dentro do banco de dados e se torna uma validação mais complexa.
+
+Iremos utilizar um modelo de uma anotação para fazer a nossa validação. E para utilizar será necessário criar uma interface e uma classe com a implementação da interface ConstraintValidator e que será implementada na camada `services.validation` por fazer parte da regra de negócio do software.
+
+```java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import javax.validation.Constraint;
+import javax.validation.Payload;
+
+@Constraint(validatedBy = UserInsertValidator.class)
+@Target({ ElementType.TYPE })
+@Retention(RetentionPolicy.RUNTIME)
+
+public @interface UserInsertValid {
+	String message() default "Validation error";
+
+	Class<?>[] groups() default {};
+
+	Class<? extends Payload>[] payload() default {};
+}
+```
+
+Agora implementaremos a regra de validação:
+
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.devsuperior.dscatalog.dto.UserInsertDTO;
+import com.devsuperior.dscatalog.entities.User;
+import com.devsuperior.dscatalog.repositories.UserRepository;
+import com.devsuperior.dscatalog.resources.exceptions.FieldMessage;
+
+public class UserInsertValidator implements ConstraintValidator<UserInsertValid, UserInsertDTO> {
+	
+	@Override
+	public void initialize(UserInsertValid ann) {
+	}
+
+	@Override
+	public boolean isValid(UserInsertDTO dto, ConstraintValidatorContext context) {
+		
+		List<FieldMessage> list = new ArrayList<>();
+		
+		// Coloque aqui seus testes de validação, acrescentando objetos FieldMessage à lista
+		
+		for (FieldMessage e : list) {
+			context.disableDefaultConstraintViolation();
+			context.buildConstraintViolationWithTemplate(e.getMessage()).addPropertyNode(e.getFieldName())
+					.addConstraintViolation();
+		}
+		return list.isEmpty();
+	}
 }
 ```
