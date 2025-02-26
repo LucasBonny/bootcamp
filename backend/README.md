@@ -826,3 +826,95 @@ public class UserInsertDTO extends UserDTO {
     //...
 }
 ```
+
+#### Implementação do UserUpdateValidator
+
+Se solicitar um update do email de algum usuário com o id de algum cliente que ja exista, irá ser retornado um status 500 por causa da validação feita na entidade do email ser único, e para fazer a solicitação retornar a nossa validação será necessário fazer um processo similar ao do `UserInsertDTO`.
+
+1. Criar a interface `UserUpdateValid`.
+
+```java
+@Constraint(validatedBy = UserUpdateValidator.class)
+@Target({ ElementType.TYPE })
+@Retention(RetentionPolicy.RUNTIME)
+
+public @interface UserUpdateValid {
+	String message() default "Validation error";
+
+	Class<?>[] groups() default {};
+
+	Class<? extends Payload>[] payload() default {};
+}
+```
+
+2. Criar a classe `UserUpdateValidator`.
+
+```java
+public class UserUpdateValidator implements ConstraintValidator<UserUpdateValid, UserUpdateDTO> {
+	
+	@Autowired
+	private UserRepository repository;
+	
+	@Override
+	public void initialize(UserUpdateValid ann) {
+	}
+
+	@Override
+	public boolean isValid(UserUpdateDTO dto, ConstraintValidatorContext context) {
+		
+		List<FieldMessage> list = new ArrayList<>();
+		
+		User user = repository.findByEmail(dto.getEmail());
+		
+		if(user != null) {
+			list.add(new FieldMessage("email", "Esse email já existe"));
+		}
+		
+		for (FieldMessage e : list) {
+			context.disableDefaultConstraintViolation();
+			context.buildConstraintViolationWithTemplate(e.getMessage()).addPropertyNode(e.getFieldName())
+					.addConstraintViolation();
+		}
+		return list.isEmpty();
+	}
+}
+```
+
+3. Criar o `UserUpdateDTO`.
+
+> [!TIP]
+> Devemos criar um `UserUpdateDTO` porque se fizermos a validação direta no `UserDTO`, o `UserInsertDTO` irá herdar a validação e não é algo que queremos.
+
+```java
+@UserUpdateValid
+public class UserUpdateDTO extends UserDTO {
+	private static final long serialVersionUID = 1L;
+
+}
+```
+
+4. Alterar o método `update` na classe `UserResource`.
+
+```java
+@PutMapping(value = "/{id}")
+public ResponseEntity<UserDTO> alterar(@PathVariable Long id, @Valid @RequestBody UserUpdateDTO obj) {
+    UserDTO newDto = userService.update(id, obj);
+    return ResponseEntity.status(HttpStatus.OK).body(newDto);
+}
+```
+
+5. Alterar no `UserService`.
+
+```java
+@Transactional
+public UserDTO update(Long id, UserUpdateDTO dto) {
+    dto.getRoles().forEach(x -> x.setAuthority(roleRepository.findById(x.getId()).get().getAuthority()));
+    if(repository.findById(id).isEmpty())
+        throw new ResourceNotFoundException("Entity not found " + id);
+    if(dto.getId() != null)
+        dto.setId(null);
+    dto.setId(id);
+    User entity = repository.save(new User(dto));
+    return new UserDTO(entity);
+}
+```

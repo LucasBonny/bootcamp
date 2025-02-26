@@ -19,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import br.com.gunthercloud.bootcamp.entitites.dto.UserDTO;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserInsertDTO;
+import br.com.gunthercloud.bootcamp.entitites.dto.UserUpdateDTO;
 import br.com.gunthercloud.bootcamp.services.UserService;
 import jakarta.validation.Valid;
 
@@ -48,9 +49,9 @@ public class UserResource {
 	}
 	
 	@PutMapping(value = "/{id}")
-	public ResponseEntity<UserDTO> alterar(@PathVariable Long id, @Valid @RequestBody UserDTO obj) {
-		obj = userService.update(id, obj);
-		return ResponseEntity.status(HttpStatus.OK).body(obj);
+	public ResponseEntity<UserDTO> alterar(@PathVariable Long id, @Valid @RequestBody UserUpdateDTO obj) {
+		UserDTO newDto = userService.update(id, obj);
+		return ResponseEntity.status(HttpStatus.OK).body(newDto);
 	}
 	
 	@DeleteMapping(value = "{id}")

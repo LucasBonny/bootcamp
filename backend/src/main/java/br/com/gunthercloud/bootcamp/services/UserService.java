@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.gunthercloud.bootcamp.entitites.User;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserDTO;
 import br.com.gunthercloud.bootcamp.entitites.dto.UserInsertDTO;
+import br.com.gunthercloud.bootcamp.entitites.dto.UserUpdateDTO;
 import br.com.gunthercloud.bootcamp.repositories.RoleRepository;
 import br.com.gunthercloud.bootcamp.repositories.UserRepository;
 import br.com.gunthercloud.bootcamp.services.exceptions.DatabaseException;
@@ -55,7 +56,7 @@ public class UserService {
 	}
 	
 	@Transactional
-	public UserDTO update(Long id, UserDTO dto) {
+	public UserDTO update(Long id, UserUpdateDTO dto) {
 		dto.getRoles().forEach(x -> x.setAuthority(roleRepository.findById(x.getId()).get().getAuthority()));
 		if(repository.findById(id).isEmpty())
 			throw new ResourceNotFoundException("Entity not found " + id);
