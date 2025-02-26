@@ -45,7 +45,7 @@ public class ResourceExceptionHandler {
 		err.setTimestamp(Instant.now());
 		err.setStatus(status.value());
 		err.setError("Validation Exception");
-		err.setMessage(e.getMessage());
+		err.setMessage(e.getLocalizedMessage());
 		err.setPath(request.getRequestURI());		
 		
 		for(FieldError f : e.getBindingResult().getFieldErrors()) {

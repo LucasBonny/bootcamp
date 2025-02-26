@@ -695,7 +695,7 @@ public ResponseEntity<UserDTO> insert(@Valid @RequestBody UserInsertDTO obj) { /
 }
 ```
 
-Agora quando for feito a validação, caso algum campo não seja válido, a resposta do endpoint irá ser 400 Bad Request com uma mensagem de erro detalhada sobre o campo que não foi validado além de outras informações adicionais.
+Agora quando for feito a validação, caso algum campo não seja válido, a resposta do endpoint irá ser 400 Bad Request com uma mensagem de erro detalhada sobre o campo que não foi validado, além de outras informações adicionais.
 
 E com isso vem uma `MethodArgumentNotValidException`, e para podermos manipular as devidas informações dessa exceção na resposta do endpoint, iremos utilizar o `@ExceptionHandler` onde podemos capturar a exceção e manipular as informações da mesma.
 
@@ -741,7 +741,7 @@ public class ValidationError extends StandardError {
 
 #### Implementando um constraintValidator customizado
 
-Quando utilizamos o `@Valid` no paramêtro de uma função, será feito uma validação para ver se está tudo ok, caso não esteja, a função não executa e lança uma exceção e nesse caso em específico a validação é feito pela sintaxe, mas queremos validar os dados dentro do banco de dados e se torna uma validação mais complexa.
+Quando utilizamos o `@Valid` no paramêtro de um método, será feito uma validação para ver se está tudo ok, caso não esteja, o método não executa e lança uma exceção e nesse caso em específico a validação é feito nos valores passados na requisição, e queremos validar os dados dentro do banco de dados e acaba tornando a validação mais complexa.
 
 Iremos utilizar um modelo de uma anotação para fazer a nossa validação. E para utilizar será necessário criar uma interface e uma classe com a implementação da interface ConstraintValidator e que será implementada na camada `services.validation` por fazer parte da regra de negócio do software.
 
@@ -785,6 +785,9 @@ import com.devsuperior.dscatalog.resources.exceptions.FieldMessage;
 
 public class UserInsertValidator implements ConstraintValidator<UserInsertValid, UserInsertDTO> {
 	
+    @Autowired
+    private UserRepository repository;
+
 	@Override
 	public void initialize(UserInsertValid ann) {
 	}
@@ -794,7 +797,10 @@ public class UserInsertValidator implements ConstraintValidator<UserInsertValid,
 		
 		List<FieldMessage> list = new ArrayList<>();
 		
-		// Coloque aqui seus testes de validação, acrescentando objetos FieldMessage à lista
+        User user = repository.findByEmail(dto.getEmail())
+        if(user != null){
+            list.add(new FieldMessage("email", "Email já existe!"));
+        }
 		
 		for (FieldMessage e : list) {
 			context.disableDefaultConstraintViolation();
@@ -803,5 +809,20 @@ public class UserInsertValidator implements ConstraintValidator<UserInsertValid,
 		}
 		return list.isEmpty();
 	}
+}
+```
+> [!IMPORTANT]
+> Para fazermos a validação de email no banco será necessário criar um contrato na interface do Repository.
+> ```java
+> User findByEmail(String email);
+> ```
+
+Na implementação usamos o ConstraintValidator que é um generic que recebe a interface e a entidade/dto como argumento, possibilitando o uso da anotação para fazer a validação da mesma.
+Agora iremos colocar a anotação no DTO.
+
+```java
+@UserInsertValid
+public class UserInsertDTO extends UserDTO {
+    //...
 }
 ```
